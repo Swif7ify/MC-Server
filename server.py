@@ -79,30 +79,31 @@ def check_and_start_server(driver):
         driver.get("https://www.mcserverhost.com/servers/e9750610/dashboard")
         time.sleep(3)
         
-        # Check server status
-        status_div = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "status-buttons"))
-        )
-        
-        status = status_div.get_attribute("status")
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        print(f"[{current_time}] Server status: {status}")
-        
-        if status == "offline":
-            print("🔴 Server is offline! Starting server...")
-            
+        try:
+            status_resume = status_div.find_element(By.XPATH, ".//button[normalize-space(text())='RESUME']")
+            print("🔵 Server needs to be resumed")
+            status_resume.click()
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            return f"Server was resumed at {current_time}"
+        except:
+            pass
+
+        # Check if server is offline and needs starting
+        try:
             start_button = driver.find_element(By.CSS_SELECTOR, "button.power-btn.start")
+            print("🔴 Server is offline! Starting server...")
             start_button.click()
-            
-            print("✅ Start button clicked! Server is starting...")
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             return f"Server was offline, started at {current_time}"
-        else:
-            return f"Server is {status} - {current_time}"
+        except:
+            pass
             
-    except Exception as e:
-        print(f"Error checking server: {e}")
-        return f"Error: {e}"
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return f"Server appears to be running - {current_time}"
+                
+        except Exception as e:
+            print(f"Error checking server: {e}")
+            return f"Error: {e}" 
 
 def monitor_server_thread(username, password, check_interval, http_server):
     """Monitor server in background thread"""

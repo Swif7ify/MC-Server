@@ -75,7 +75,6 @@ def login_to_mcserverhost(driver, username, password):
 def check_and_start_server(driver):
     """Check server status and start if offline"""
     try:
-        # Go to server dashboard
         driver.get("https://www.mcserverhost.com/servers/e9750610/dashboard")
         time.sleep(3)
         
@@ -88,7 +87,6 @@ def check_and_start_server(driver):
         except:
             pass
 
-        # Check if server is offline and needs starting
         try:
             start_button = driver.find_element(By.CSS_SELECTOR, "button.power-btn.start")
             print("🔴 Server is offline! Starting server...")
@@ -97,13 +95,13 @@ def check_and_start_server(driver):
             return f"Server was offline, started at {current_time}"
         except:
             pass
-            
+
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return f"Server appears to be running - {current_time}"
                 
-        except Exception as e:
-            print(f"Error checking server: {e}")
-            return f"Error: {e}" 
+    except Exception as e:
+        print(f"Error checking server: {e}")
+        return f"Error: {e}" 
 
 def monitor_server_thread(username, password, check_interval, http_server):
     """Monitor server in background thread"""

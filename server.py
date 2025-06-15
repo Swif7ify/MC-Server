@@ -29,9 +29,13 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         </html>
         """
         self.wfile.write(response.encode())
+    
+    def do_HEAD(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
 
 def setup_driver():
-    """Setup headless Chrome driver"""
     chrome_options = Options()
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
@@ -41,7 +45,6 @@ def setup_driver():
     return webdriver.Chrome(options=chrome_options)
 
 def login_to_mcserverhost(driver, username, password):
-    """Login to MCServerHost"""
     try:
         print("Logging in...")
         driver.get("https://www.mcserverhost.com/login")
@@ -73,38 +76,80 @@ def login_to_mcserverhost(driver, username, password):
         return False
 
 def check_and_start_server(driver):
-    """Check server status and start if offline"""
+    """Check server status and start/resume if needed"""
     try:
         driver.get("https://www.mcserverhost.com/servers/e9750610/dashboard")
         time.sleep(3)
         
-        try:
-            status_resume = status_div.find_element(By.XPATH, ".//button[normalize-space(text())='RESUME']")
-            print("🔵 Server needs to be resumed")
-            status_resume.click()
-            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            return f"Server was resumed at {current_time}"
-        except:
-            pass
-
-        try:
-            start_button = driver.find_element(By.CSS_SELECTOR, "button.power-btn.start")
-            print("🔴 Server is offline! Starting server...")
-            start_button.click()
-            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            return f"Server was offline, started at {current_time}"
-        except:
-            pass
-
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return f"Server appears to be running - {current_time}"
+        
+        try:
+            suspended_card = driver.find_element(By.ID, "suspended-card")
+            if suspended_card.is_displayed():
+                print("⏸️ Server is PAUSED! Resuming server...")
                 
+                resume_button = driver.find_element(By.CSS_SELECTOR, "button.btn-solid.theme-blue")
+                resume_button.click()
+                
+                print("✅ Resume button clicked! Server is resuming...")
+                
+                time.sleep(10)
+                
+                driver.refresh()
+                time.sleep(3)
+                
+                try:
+                    status_div = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.ID, "status-buttons"))
+                    )
+                    
+                    status = status_div.get_attribute("status")
+                    print(f"[{current_time}] Server status after resume: {status}")
+                    
+                    if status == "offline":
+                        print("🔴 Server is offline after resume! Starting server...")
+                        
+                        start_button = driver.find_element(By.CSS_SELECTOR, "button.power-btn.start")
+                        start_button.click()
+                        
+                        print("✅ Start button clicked! Server is starting...")
+                        return f"Server was paused, resumed and started at {current_time}"
+                    else:
+                        return f"Server was paused, resumed and is now {status} - {current_time}"
+                        
+                except Exception as e:
+                    return f"Server resumed but could not check status: {e}"
+                    
+        except:
+            pass
+        
+        try:
+            status_div = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "status-buttons"))
+            )
+            
+            status = status_div.get_attribute("status")
+            print(f"[{current_time}] Server status: {status}")
+            
+            if status == "offline":
+                print("🔴 Server is offline! Starting server...")
+                
+                start_button = driver.find_element(By.CSS_SELECTOR, "button.power-btn.start")
+                start_button.click()
+                
+                print("✅ Start button clicked! Server is starting...")
+                return f"Server was offline, started at {current_time}"
+            else:
+                return f"Server is {status} - {current_time}"
+                
+        except Exception as e:
+            return f"Could not check status: {e}"
+            
     except Exception as e:
         print(f"Error checking server: {e}")
-        return f"Error: {e}" 
+        return f"Error: {e}"
 
 def monitor_server_thread(username, password, check_interval, http_server):
-    """Monitor server in background thread"""
     print("🎮 MCServer Auto-Start Monitor")
     print("=" * 40)
     print(f"Check interval: {check_interval//60} minutes")
@@ -115,11 +160,9 @@ def monitor_server_thread(username, password, check_interval, http_server):
     try:
         while True:
             try:
-                # Setup new driver if needed
                 if driver is None:
                     driver = setup_driver()
                     
-                    # Login
                     if not login_to_mcserverhost(driver, username, password):
                         http_server.status_info = "Login failed, retrying..."
                         print("❌ Login failed, retrying in 1 minute...")
@@ -129,13 +172,10 @@ def monitor_server_thread(username, password, check_interval, http_server):
                         time.sleep(60)
                         continue
                 
-                # Check server status
                 status_result = check_and_start_server(driver)
                 http_server.status_info = status_result
                 
                 print(f"⏳ Next check in {check_interval//60} minutes...")
-                
-                # Wait for next check
                 time.sleep(check_interval)
                 
             except Exception as e:
@@ -157,22 +197,17 @@ def monitor_server_thread(username, password, check_interval, http_server):
             driver.quit()
 
 def main():
-    # Configuration
     USERNAME = "Tofuism"
     PASSWORD = "8czgLVq52gDLGP9"
-    CHECK_INTERVAL = 180  # 3 minutes in seconds
+    CHECK_INTERVAL = 180
     
-    # Get port from environment (Render provides this)
     PORT = int(os.environ.get('PORT', 10000))
     
-    # Start HTTP server
     http_server = HTTPServer(('0.0.0.0', PORT), HealthCheckHandler)
     http_server.status_info = "Starting up..."
     
     print(f"🌐 HTTP server starting on port {PORT}")
-    print(f"🔗 Health check available at: http://localhost:{PORT}")
     
-    # Start monitoring in background thread
     monitor_thread = threading.Thread(
         target=monitor_server_thread, 
         args=(USERNAME, PASSWORD, CHECK_INTERVAL, http_server),
@@ -180,9 +215,8 @@ def main():
     )
     monitor_thread.start()
     
-    # Start HTTP server (this blocks)
     try:
-        print("🚀 Server running! Press Ctrl+C to stop")
+        print("🚀 Server running!")
         http_server.serve_forever()
     except KeyboardInterrupt:
         print("\n🛑 Server stopped")

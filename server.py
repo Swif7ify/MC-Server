@@ -37,7 +37,7 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
 def setup_driver():
-    """Setup Chrome with more stable options for cloud environments"""
+    """Setup Chrome with Windows-specific stable options"""
     chrome_options = Options()
     
     # Essential headless options
@@ -45,32 +45,67 @@ def setup_driver():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     
-    # Additional stability options for cloud environments
+    # GPU and graphics options (fixes the GPU errors)
     chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-gpu-sandbox")
     chrome_options.add_argument("--disable-software-rasterizer")
+    chrome_options.add_argument("--disable-3d-apis")
+    chrome_options.add_argument("--disable-accelerated-2d-canvas")
+    chrome_options.add_argument("--disable-accelerated-jpeg-decoding")
+    chrome_options.add_argument("--disable-accelerated-mjpeg-decode")
+    chrome_options.add_argument("--disable-accelerated-video-decode")
+    
+    # Network and proxy options (fixes proxy resolver errors)
+    chrome_options.add_argument("--no-proxy-server")
+    chrome_options.add_argument("--disable-background-networking")
+    chrome_options.add_argument("--disable-sync")
+    
+    # Remove problematic single-process mode
+    # chrome_options.add_argument("--single-process")  # This causes issues on Windows
+    
+    # Additional stability options
     chrome_options.add_argument("--disable-background-timer-throttling")
     chrome_options.add_argument("--disable-backgrounding-occluded-windows")
     chrome_options.add_argument("--disable-renderer-backgrounding")
     chrome_options.add_argument("--disable-features=TranslateUI")
-    chrome_options.add_argument("--disable-ipc-flooding-protection")
     chrome_options.add_argument("--disable-web-security")
     chrome_options.add_argument("--disable-features=VizDisplayCompositor")
+    chrome_options.add_argument("--disable-extensions")
+    chrome_options.add_argument("--disable-plugins")
+    chrome_options.add_argument("--disable-images")
     
-    # Memory and performance
+    # Memory options
     chrome_options.add_argument("--memory-pressure-off")
-    chrome_options.add_argument("--max_old_space_size=4096")
-    chrome_options.add_argument("--single-process")
+    chrome_options.add_argument("--max_old_space_size=2048")
     
     # Window size
     chrome_options.add_argument("--window-size=1920,1080")
+    
+    # Additional Windows-specific options
+    chrome_options.add_argument("--disable-logging")
+    chrome_options.add_argument("--disable-dev-tools")
+    chrome_options.add_argument("--silent")
+    chrome_options.add_argument("--log-level=3")
+    
+    # Prefs to disable more features
+    prefs = {
+        "profile.default_content_setting_values.notifications": 2,
+        "profile.default_content_settings.popups": 0,
+        "profile.managed_default_content_settings.images": 2,
+        "profile.default_content_setting_values.media_stream": 2,
+    }
+    chrome_options.add_experimental_option("prefs", prefs)
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     
     try:
         driver = webdriver.Chrome(options=chrome_options)
         driver.set_page_load_timeout(30)
         driver.implicitly_wait(10)
+        print("✅ Chrome driver created successfully")
         return driver
     except Exception as e:
-        print(f"Failed to create driver: {e}")
+        print(f"❌ Failed to create driver: {e}")
         return None
 
 def login_to_mcserverhost(driver, username, password):

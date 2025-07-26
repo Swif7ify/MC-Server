@@ -148,7 +148,7 @@ def check_and_start_server(driver):
             print(f"Checking server status (attempt {attempt + 1}/{max_retries})...")
             
             driver.get("https://www.mcserverhost.com/servers/e9750610/dashboard")
-            time.sleep(5)  # Increased wait time
+            time.sleep(5)  
             
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             
@@ -164,7 +164,7 @@ def check_and_start_server(driver):
                     resume_button.click()
                     
                     print("✅ Resume button clicked! Waiting for resume...")
-                    time.sleep(15)  # Increased wait time
+                    time.sleep(15)  
                     
                     # Refresh and check status after resume
                     driver.refresh()
@@ -300,8 +300,8 @@ def monitor_server_thread(username, password, check_interval, http_server):
                 pass
 
 def main():
-    USERNAME = "Tofuism"
-    PASSWORD = "8czgLVq52gDLGP9"
+    USERNAME = "YOUR_USERNAME"
+    PASSWORD = "YOUR_PASSWORD"
     CHECK_INTERVAL = 60  # 1 minute
 
     PORT = int(os.environ.get('PORT', 10000))

@@ -29,9 +29,6 @@ This project is a Python-based monitoring tool for automatically checking and st
     ```powershell
     pip install -r requirements.txt
     ```
-3. **Download ChromeDriver:**
-    - Download the correct version of ChromeDriver from [here](https://sites.google.com/chromium.org/driver/).
-    - Place the `chromedriver.exe` in your PATH or in the project directory.
 
 ## Configuration
 
@@ -52,6 +49,12 @@ python server.py
 
 -   The HTTP health check server will be available at `http://localhost:10000` (or your chosen port).
 -   The monitor will check your server status every minute by default.
+
+## Hosting
+
+You can also host this monitor on a cloud server or a VPS to keep your Minecraft server monitored 24/7. Just make sure your cloud environment supports running Chrome and ChromeDriver (for example, a Windows or Linux VM with a desktop environment).  
+If you want to access the health check page remotely, ensure the chosen port is open in your firewall and security group settings.
+
 
 ## Security Note
 
